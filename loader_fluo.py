@@ -1,7 +1,8 @@
-import os
-import pandas as pd
-import re
 import io
+import os
+import re
+
+import pandas as pd
 
 def load_fluo_file(path):
     """

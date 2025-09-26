@@ -1,13 +1,14 @@
-import plotly.graph_objs as go
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 import numpy as np
 import pandas as pd
+import plotly.graph_objs as go
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 
-def plot_spectra(curves, y_label="Absorbance (a.u.)"):
+def plot_spectra(curves, y_label="Absorbance (a.u.)", peak_data=None):
     """
     Plot multiple spectra using Plotly (for the app).
     curves: dict of {label: DataFrame}
+    peak_data: dict of {curve_name: peak_results} for marking peaks
     """
     fig = go.Figure()
 
@@ -19,6 +20,36 @@ def plot_spectra(curves, y_label="Absorbance (a.u.)"):
             mode="lines",
             name=label
         ))
+        
+        # Add peak markers if available for this curve
+        if peak_data and label in peak_data:
+            peaks = peak_data[label].get('all_peaks', [])
+            if peaks:
+                wavelengths = [p['wavelength'] for p in peaks]
+                intensities = [p['intensity'] for p in peaks]
+                peak_labels = [f"P{p['index']}" for p in peaks]
+                
+                # Add peak markers
+                fig.add_trace(go.Scatter(
+                    x=wavelengths,
+                    y=intensities,
+                    mode="markers+text",
+                    marker=dict(
+                        size=8,
+                        color="red",
+                        symbol="circle",
+                        line=dict(width=2, color="black")
+                    ),
+                    text=peak_labels,
+                    textposition="top center",
+                    textfont=dict(size=10, color="black"),
+                    name=f"{label} - Detected Peaks",
+                    showlegend=False,
+                    hovertemplate="<b>%{text}</b><br>" +
+                                "Wavelength: %{x:.1f} nm<br>" +
+                                "Intensity: %{y:.2f} a.u.<br>" +
+                                "<extra></extra>"
+                ))
 
     # Layout configuration
     fig.update_layout(
@@ -61,10 +92,11 @@ def plot_spectra(curves, y_label="Absorbance (a.u.)"):
     return fig
 
 
-def export_plot_as_jpg(curves, path, y_label="Absorbance (a.u.)"):
+def export_plot_as_jpg(curves, path, y_label="Absorbance (a.u.)", peak_data=None):
     """
     Export plot to JPG using Matplotlib with the legend inside the plot area.
     curves: dict of {label: DataFrame}
+    peak_data: dict of {curve_name: peak_results} for marking peaks
     """
     fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -79,6 +111,19 @@ def export_plot_as_jpg(curves, path, y_label="Absorbance (a.u.)"):
         y = y[mask]
 
         ax.plot(x, y, label=label)
+        
+        # Add peak markers if available for this curve
+        if peak_data and label in peak_data:
+            peaks = peak_data[label].get('all_peaks', [])
+            if peaks:
+                for peak in peaks:
+                    ax.plot(peak['wavelength'], peak['intensity'], 'ro', 
+                           markersize=8, markeredgecolor='black', markeredgewidth=1)
+                    ax.annotate(f"P{peak['index']}", 
+                               (peak['wavelength'], peak['intensity']),
+                               xytext=(0, 10), textcoords='offset points',
+                               ha='center', va='bottom',
+                               fontsize=9, fontweight='bold')
 
     ax.set_xlabel("Wavelength (nm)")
     ax.set_ylabel(y_label)

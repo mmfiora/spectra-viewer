@@ -1,17 +1,21 @@
-import pandas as pd
 import os
 
-def save_curves_to_csv(curves, filename):
-    """Save all curves to AppEspectros/csv or fallback to current dir."""
-    folder = "csv"
-    if os.path.exists("AppEspectros"):
-        os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, filename)
-    else:
-        path = filename  # Save in working directory
+import pandas as pd
 
+
+def save_curves_to_csv(curves, filename):
+    """Save all curves to a CSV file."""
     if not curves:
         return
+    
+    # Ensure filename has .csv extension
+    if not filename.endswith('.csv'):
+        filename += '.csv'
+    
+    # Create output directory if needed
+    output_dir = os.path.dirname(filename)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
 
     df_out = pd.DataFrame()
     for i, (label, df) in enumerate(curves.items()):
@@ -19,5 +23,5 @@ def save_curves_to_csv(curves, filename):
             df_out[df.columns[0]] = df.iloc[:, 0]
         df_out[label] = df.iloc[:, 1].values
 
-    df_out.to_csv(path, index=False)
-    return path
+    df_out.to_csv(filename, index=False)
+    return filename
