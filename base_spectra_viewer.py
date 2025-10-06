@@ -1,14 +1,16 @@
+import os
+import tempfile
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                              QListWidget, QLabel, QMessageBox, QFileDialog, 
                              QInputDialog, QSizePolicy)
 from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtCore import QUrl
 
 from plotter import plot_spectra, export_plot_as_jpg
 from curve_tools import (normalize_curve, add_offset, subtract_curves, 
-                         find_fluorescence_peaks_adaptive, diagnose_missing_peak, 
-                         find_peaks_in_region, find_fluorescence_peaks_force_detect,
-                         find_peaks_and_shoulders_combined, find_shoulders_and_inflections,
-                         find_shoulder_in_region, find_true_shoulders_excluding_peaks)
+                         diagnose_missing_peak, 
+                         find_shoulders_and_inflections,
+                         find_shoulder_in_region)
 from file_tools import save_curves_to_csv
 from config import DEFAULT_WINDOW_SIZE, DEFAULT_PLOT_SIZE
 from peak_analysis_dialog import SimplePeakTable
@@ -180,7 +182,22 @@ class BaseSpectraViewer(QWidget):
                                if name in self.plotted_curves}
             
             fig = plot_spectra(self.plotted_curves, y_label=self.y_label, peak_data=current_peak_data)
-            self.plot_view.setHtml(fig.to_html(include_plotlyjs="cdn"))
+            
+            # Save to temporary file and load via file URL (fixes QWebEngineView issues)
+            temp_dir = tempfile.gettempdir()
+            temp_file = os.path.join(temp_dir, 'spectra_plot.html')
+            
+            # Generate HTML
+            html_string = fig.to_html(include_plotlyjs=True, include_mathjax=False)
+            
+            # Remove problematic CSS rule that causes QWebEngineView errors
+            html_string = html_string.replace(':focus-visible', ':focus')
+            
+            # Write fixed HTML to file
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                f.write(html_string)
+            
+            self.plot_view.setUrl(QUrl.fromLocalFile(temp_file))
         except Exception as e:
             QMessageBox.critical(self, "Plot Error", f"Failed to generate plot:\n{str(e)}")
 
@@ -365,32 +382,10 @@ class BaseSpectraViewer(QWidget):
             return
         
         try:
-            # Perform combined peak and shoulder analysis (all called "peaks")
-            print("🔍 Analyzing peaks (including shoulders)...")
-            peak_results = find_peaks_and_shoulders_combined(df, max_total_peaks=3)
-            
-            # Mostrar información unificada
-            print(f"📊 Found {peak_results['num_peaks_found']} peaks total")
-            print(f"   - Traditional peaks: {peak_results.get('traditional_peaks_count', 0)}")
-            print(f"   - Shoulder peaks: {peak_results.get('shoulder_peaks_count', 0)}")
-            
-            # Mostrar todos los picos (unificados)
-            if peak_results.get('all_peaks'):
-                print("📋 All peaks by wavelength:")
-                for peak in peak_results['all_peaks']:
-                    detection_type = peak.get('detection_type', 'unknown')
-                    type_indicator = "(traditional)" if detection_type == 'traditional_peak' else "(shoulder)" if detection_type == 'shoulder_peak' else ""
-                    print(f"   🔸 Peak {peak['display_id']}: {peak['wavelength']:.1f} nm, {peak['intensity']:.2f} a.u. {type_indicator}")
-            
-            # Store peak data for plotting
-            self.peak_data[curve_name] = peak_results
-            
-            # Close existing dialog if open
-            if curve_name in self.peak_dialogs:
-                self.peak_dialogs[curve_name].close()
-            
-            # Create and show simple peak table
-            dialog = SimplePeakTable(peak_results, curve_name, self)
+            # Peak detection has been removed
+            QMessageBox.information(self, "Peak Detection", 
+                                   "Peak detection functionality has been removed from this application.")
+            return
             
             # Connect signal to update plot when peaks are removed
             dialog.peak_removed.connect(lambda: self._on_peak_removed(curve_name))
