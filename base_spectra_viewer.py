@@ -7,13 +7,9 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtCore import QUrl
 
 from plotter import plot_spectra, export_plot_as_jpg
-from curve_tools import (normalize_curve, add_offset, subtract_curves, 
-                         diagnose_missing_peak, 
-                         find_shoulders_and_inflections,
-                         find_shoulder_in_region)
+from curve_tools import (normalize_curve, add_offset, subtract_curves)
 from file_tools import save_curves_to_csv
 from config import DEFAULT_WINDOW_SIZE, DEFAULT_PLOT_SIZE
-from peak_analysis_dialog import SimplePeakTable
 
 
 class BaseSpectraViewer(QWidget):
